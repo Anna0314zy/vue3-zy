@@ -1,0 +1,27 @@
+{
+  "name": "vue3-lesson",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node scripts/dev.js reactivity -f esm-browser"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "esbuild": "^0.15.7",
+    "execa": "4",
+    "minimist": "^1.2.8",
+    "rollup": "^4.40.0",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  }
+}
