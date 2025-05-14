@@ -1,0 +1,24 @@
+忽略所有.log文件
+*.log
+ 
+# 忽略node_modules目录
+node_modules/
+ 
+# 忽略所有NPM项目的lock文件
+package-lock.json
+yarn.lock
+ 
+# 忽略所有IDE配置文件
+.idea/
+.vscode/
+ 
+# 忽略vue项目的开发依赖
+/public/
+ 
+# 忽略编译后的文件
+dist/
+ 
+# 忽略环境配置文件
+.env.local
+ 
+# 忽略文件的本地修改（例如.idea的workspace.xml等）
