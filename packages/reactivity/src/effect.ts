@@ -1,130 +1,116 @@
-// TODO 全局变量 让 属性 跟 effect 关联起来
-export let activeEffect = undefined
+// effect1(()=>{
+//     state.name
+//     effect2(()=>{
+//         state.age;
+//     })
+//     state.address
+// })
 
-function cleanUpEffect(effect) {
-    // TODO 清除依赖 清理上一次的依赖避免死循环 先删除 后加上
-   for(let i = 0; i < effect.deps.length; i++) {
-        const dep = effect.deps[i];
-        dep.delete(effect);
-    }
-    effect.deps.length = 0;
-}
+// // effectStack = [effect1] activeEffect = effect1
+// // effect1 -> name
+// // effect2 -> age
+// // effect1 -> address
 
-export class ReactiveEffect{
-    // 默认 会将 fn 挂在到类的实例上
-    constructor(private fn, public scheduler?) {
-       this.fn = fn;
-    }
-    parent = undefined;
-    deps = [] //TODO  我依赖了哪些属性
-    active = true; // 是否激活
 
-    run() {
-        // 不收集依赖
-      if(!this.active) {
-        return this.fn();
-      }
-      try{
-        this.parent = activeEffect;
-        activeEffect = this;
-        // TODO cleanUpEffect(this); 先删除所有依赖
-        cleanUpEffect(this);
-        return this.fn();
-      }finally{
-        activeEffect = this.parent;
-        this.parent = undefined
-      }
-    }
+let effectStack = []; // 目的就是为了能保证我们effect执行的时候 可以存储正确的关系
+let activeEffect;
 
-    stop() {
-        console.log('stop')
-      // 虽然这里亭子了
-        if(this.active) {
-            this.active = false;
-            cleanUpEffect(this)
-        }
+function cleanupEffect(effect) {
+    const { deps } = effect;
+    for (let dep of deps) {
+        // set 删除effect 让属性 删除掉对应的effect   name = []
+        dep.delete(effect); // 让属性对应的effect移除掉，这样属性更新的时候 就不会触发这个effect重新执行了
     }
 }
-
-
-
-
-//TODO  effect 调度
-export function effect(fn,options:any = {}) {
-
-
-    // 创建一个响应式的effect 并且让它执行
-
-    const _effect = new ReactiveEffect(fn,options.scheduler);
-    _effect.run();
-    // 
-    // 把runner 方法直接给用户
-    const runner = _effect.run.bind(_effect);
-    //TODO  可以通过runner.effect 访问到 effect 的实例
-    runner.effect = _effect;
-    return runner
-}
-const targetMap = new WeakMap();
-export function track(target,key) {
-    // 让这个对象上的属性 记录当前的activeEffect
-
-    console.log('activeEffect',activeEffect)
-
-    if(activeEffect) { // 说明用户在effect 使用数据
-
-        let depsMap = targetMap.get(target);
-        // 如果没有 创建一个映射表
-        if(!depsMap) {
-            targetMap.set(target, (depsMap = new Map()));
-        }
-
-
-        let dep = depsMap.get(key);
-        if(!dep) {
-            depsMap.set(key, (dep = new Set()));
-        }
-
-        let shouldTrack = !dep.has(activeEffect);
-        // 看下 set 里 是否有这个effect
-        if(shouldTrack) {
-            dep.add(activeEffect);
-            activeEffect.deps.push(dep);
-        }
-
-
+// 属性变化 触发的是 dep -> effect
+// effect.deps = [] 和属性是没关系的
+export class ReactiveEffect {
+    active = true; // this.active = true;
+    deps = []; // 让effect 记录他依赖了哪些属性 ， 同时要记录当前属性依赖了哪个effect
+    constructor(public fn, public scheduler?) { // this.fn = fn;
 
     }
-
-    console.log('targetMap',targetMap)
-    
-}
-
-export function trigger(target,key,value,oldValue) {
-    // 通过对象上的属性 让这个属性对应的effect 重新执行
-
-
-    const depsMap = targetMap.get(target)
-
-    if(!depsMap) {
-        return;
-    }
-    const dep = depsMap.get(key);
-    if(!dep) {
-        return;
-    }
-    const effects = [...dep]
-    effects.forEach((effect:any) => {
-
-        if(effect !== activeEffect) {
-            // TODO  避免无限循环  如果不是当前的effect 就执行
-            // 让这个 effect 执行
-            // TODO 调度
-            if(effect.scheduler) {
-                effect.scheduler();
-            }else {
-                effect.run();
+    run() { // 调用run的时候会让fn执行
+        if (!this.active) { // 稍后如果非激活状态 调用run方法 默认会执行fn函数
+            return this.fn();
+        }
+        if (!effectStack.includes(this)) { // 屏蔽同一个effect会多次执行
+            try {
+                effectStack.push(activeEffect = this);
+                return this.fn(); // 取值  new Proxy 会执行get方法  (依赖收集)
+            } finally {
+                effectStack.pop(); // 删除最后一个
+                activeEffect = effectStack[effectStack.length - 1]
             }
         }
-    })
+    }
+    stop() { // 让effect 和 dep 取消关联 dep上面存储的effect移除掉即可
+        if (this.active) {
+            cleanupEffect(this)
+            this.active = false;
+        }
+    }
+}
+// obj name :[effect]
+//     age : [effect]
+// {对象：{属性 ： [effect,effect]}  } 
+export function isTracking() {
+    return activeEffect !== undefined
+}
+const targetMap = new WeakMap();
+export function track(target, key) { // 一个属性对应多个effect， 一个effect中依赖了多个属性 =》 多对多
+    // 是只要取值我就要收集吗？
+    if (!isTracking()) { // 如果这个属性 不依赖于effect直接跳出即可
+        return
+    }
+    let depsMap = targetMap.get(target);
+    if (!depsMap) {
+        targetMap.set(target, (depsMap = new Map())); // {对象：map{}}
+    }
+    let dep = depsMap.get(key);
+    if (!dep) {
+        depsMap.set(key, (dep = new Set()));// {对象：map{name:set[]}}
+    }
+    trackEffects(dep);
 
 }
+export function trackEffects(dep) {
+    let shouldTrack = !dep.has(activeEffect); // 看一下这个属性有没有存过这个effect
+    if (shouldTrack) {
+        dep.add(activeEffect); // // {对象：map{name:set[effect,effect]}}
+        activeEffect.deps.push(dep); // 稍后用到
+    } // { 对象：{name:set,age:set}
+
+}
+export function trigger(target, key) {
+    let depsMap = targetMap.get(target);
+    if (!depsMap) return;// 属性修改的属性 根本没有依赖任何的effect
+    let deps = []; // [set ,set ]
+    if (key !== undefined) {
+        deps.push(depsMap.get(key));
+    }
+    let effects = [];
+    for (const dep of deps) {
+        effects.push(...dep)
+    }
+    triggerEffects(effects);
+}
+export function triggerEffects(dep) {
+    for (const effect of dep) { // 如果当前effect执行 和 要执行的effect是同一个，不要执行了 防止循环
+        if (effect !== activeEffect) {
+            if (effect.scheduler) {
+                return effect.scheduler()
+            }
+            effect.run(); // 执行effect
+        }
+    }
+}
+export function effect(fn) {
+    const _effect = new ReactiveEffect(fn);
+    _effect.run(); // 会默认让fn执行一次
+    let runner = _effect.run.bind(_effect);
+    runner.effect = _effect; // 给runner添加一个effect实现 就是 effect实例
+    return runner;
+}
+
+// vue3 的响应式原理  取值时 收集对应的effect， 改值时找到对应的effect执行
