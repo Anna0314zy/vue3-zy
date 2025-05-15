@@ -25,7 +25,7 @@ export function watch(source,cb) {
 let getter;
    if(isReactive(source)) {
       // 对所有对象的属性进行监听
-    getter = () => source;
+      getter = () => traverse(source); // 👈 深度触发依赖收集
 
    }else if(isFunction(source)) {
        // 监听函数
@@ -33,13 +33,16 @@ let getter;
    }
    let oldValue;
 
+   console.log('wacth',getter,source,cb)
+
    // TODO 数据变化会执行对应的schedule getter fn  收集当前的依赖
    const effect = new ReactiveEffect(getter,() => {
       // TODO 数据变化之后 会执行
       const newValue = effect.run(); // 需要手动执行
       cb(newValue,oldValue);
+
+    
    
    })
    oldValue = effect.run();
-  
 }

@@ -1,26 +1,15 @@
-// effect1(()=>{
-//     state.name
-//     effect2(()=>{
-//         state.age;
-//     })
-//     state.address
-// })
-
-// // effectStack = [effect1] activeEffect = effect1
-// // effect1 -> name
-// // effect2 -> age
-// // effect1 -> address
-
 
 let effectStack = []; // 目的就是为了能保证我们effect执行的时候 可以存储正确的关系
 let activeEffect;
 
 function cleanupEffect(effect) {
     const { deps } = effect;
-    for (let dep of deps) {
-        // set 删除effect 让属性 删除掉对应的effect   name = []
-        dep.delete(effect); // 让属性对应的effect移除掉，这样属性更新的时候 就不会触发这个effect重新执行了
+     // 从所有 deps 中移除当前 effect
+     for (let i = 0; i < effect.deps.length; i++) {
+        effect.deps[i].delete(effect);
     }
+    // 清空 deps
+    effect.deps.length = 0;
 }
 // 属性变化 触发的是 dep -> effect
 // effect.deps = [] 和属性是没关系的
@@ -37,6 +26,7 @@ export class ReactiveEffect {
         if (!effectStack.includes(this)) { // 屏蔽同一个effect会多次执行
             try {
                 effectStack.push(activeEffect = this);
+                cleanupEffect(this)
                 return this.fn(); // 取值  new Proxy 会执行get方法  (依赖收集)
             } finally {
                 effectStack.pop(); // 删除最后一个
@@ -96,7 +86,9 @@ export function trigger(target, key) {
     triggerEffects(effects);
 }
 export function triggerEffects(dep) {
-    for (const effect of dep) { // 如果当前effect执行 和 要执行的effect是同一个，不要执行了 防止循环
+
+    const effects:any = new Set(dep)
+    for (const effect of effects) { // 如果当前effect执行 和 要执行的effect是同一个，不要执行了 防止循环
         if (effect !== activeEffect) {
             if (effect.scheduler) {
                 return effect.scheduler()
@@ -112,5 +104,3 @@ export function effect(fn) {
     runner.effect = _effect; // 给runner添加一个effect实现 就是 effect实例
     return runner;
 }
-
-// vue3 的响应式原理  取值时 收集对应的effect， 改值时找到对应的effect执行

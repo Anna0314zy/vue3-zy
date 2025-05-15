@@ -42,4 +42,4 @@ export const isNumber = (val) => typeof val === 'number'
 // 判断key是不是整数
 export const isIntegerKey = (key) => '' + parseInt(key) === key
 
-export const hasChange = (value, oldValue) => value === oldValue
+export const hasChanged = (value, oldValue) => value === oldValue

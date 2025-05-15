@@ -10,7 +10,7 @@
     <script type="module">
 
         // import {reactive,effect} from '../../../node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
-        import {reactive,effect} from './reactivity.esm-browser.js'
+        import {reactive,effect} from '../dist/reactivity.esm-browser.js'
         const state  = reactive({
             ok:true,
             name: 'vue',
@@ -20,30 +20,36 @@
             }
         })
         // TODO 对象被多次代理
-        const state1 = reactive(state)
-        const state2 = reactive(state)
-        // console.log("对象被多次代理",state1 === state2) // true
-        // // TODO 代理被代理的对象
-        const state3 = reactive(state1)
-        console.log("代理被代理的对象",state3,state1 === state3) // true
+        // const state1 = reactive(state)
+        // const state2 = reactive(state)
+        // // console.log("对象被多次代理",state1 === state2) // true
+        // // // TODO 代理被代理的对象
+        // const state3 = reactive(state1)
+        // console.log("代理被代理的对象",state3,state1 === state3) // true
         // effect(() => {
         //     console.log('effect run ')
         //   state.name = Math.random();
         //   app.innerHTML = state.name + ' ' + state.age + '岁' + ' ' + state.address.city
         // })
-        // effect(() => {
-        //     console.log('effect run ')
-        //     app.innerHTML  = state.ok ? state.name :'not'
-        // })
-        // setTimeout(() => {
-        //     state.ok = false
-        //     setTimeout(() => {
-        //         // 等会修改了name 会不会触发 effect
+        effect(() => {
+            console.log('effect run ')
+            app.innerHTML  = state.ok ? state.name :'not'
+        })
+        setTimeout(() => {
+            state.ok = false
+            setTimeout(() => {
+                // 等会修改了name 会不会触发 effect
 
-        //         console.log('修改 name')
-        //         state.name = 'xxx'
-        //     }, 1000)
-        // }, 1000)
+                console.log('修改 name')
+                state.name = 'xxx'
+                setTimeout(() => {
+                // 等会修改了name 会不会触发 effect
+
+                console.log('修改 ok')
+                state.ok = 'xxx'
+            }, 1000)
+            }, 1000)
+        }, 1000)
 
         // setTimeout(() => {
         //     state.name = 'name' + 'Gegnxin'

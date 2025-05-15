@@ -12,20 +12,34 @@
     <div id="app"></div>
     <script type="module">
         // vue -> runtime-dom -> runtime-core -> reactivity
-        import { reactive, effect, watch, watchEffect } from '../../../node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        // import { reactive, effect, watch, watchEffect } from '../../../node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
 // 
         // import { reactive, effect, watch, watchEffect } from './reactivity.js'
-
+        import {reactive, effect, watch,ref} from '../dist/reactivity.esm-browser.js'
         const state = reactive({ name: 'jw', address: { n: 316 }, age: 1 })
 
-        // 对象是无法监控到前后值的更改
-
-        // TODO  默认 是 异步的 当然可以变成 同步的
         watch(state, (newVal, oldVal) => {
             console.log('数据变化了', newVal, oldVal)
         }); // 默认先标记成同步，后面说异步geng'xin
-        state.name = 'jiang'
+        setTimeout(() => {
         console.log('数据变化outer')
+       state.name = 'jiang'
+        },1000)
+
+        // const state = ref(0); // defineProperty
+        // effect(()=>{
+        //     console.log("eff.run",state.value)
+        // })
+        // setTimeout(()=>{
+        //     // debugger
+        //     console.log("state改变",state.value)
+        //     state.value = 11
+
+        // },1000)
+        // 对象是无法监控到前后值的更改
+
+        // TODO  默认 是 异步的 当然可以变成 同步的
+       
 
 
         // watchEffect(() => {
